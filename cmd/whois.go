@@ -195,8 +195,8 @@ var (
 
 						// Write history records to file if any
 						if len(historyRecords) > 0 {
-							fmt.Println("[*] Records Found: %d\n", len(historyRecords))
-							fmt.Println("[*] WHOIS History being written to file: %s%s\n", whoisOutputFile, fType.Extension())
+							fmt.Printf("[*] Records Found: %d\n", len(historyRecords))
+							fmt.Printf("[*] WHOIS History being written to file: %s%s\n", whoisOutputFile, fType.Extension())
 							writeErr := export.WriteWhoIsHistoryToFile(historyRecords, filename, fType)
 							if writeErr != nil {
 								if debugGlobal {
