@@ -59,7 +59,7 @@ var (
 
 			// Validate credentials
 			if key == "" {
-				fmt.Println("API key is required. Set the key with the \"set-key\" command. [crowsnest set-key <api_key>]")
+				fmt.Println("API key is required. Set the key with the \"set dehashed\" command. [crowsnest set dehashed <api_key>]")
 				return
 			}
 

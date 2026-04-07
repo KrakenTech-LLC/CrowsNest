@@ -53,15 +53,23 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&debugGlobal, "debug", false, "Show debug information")
 
 	// Add subcommands
-	rootCmd.AddCommand(setDehashedKeyCmd)
-	rootCmd.AddCommand(setHunterKeyCmd)
+	rootCmd.AddCommand(setCmd)
 	rootCmd.AddCommand(setLocalDb)
 	rootCmd.AddCommand(buyMeCoffeeCmd)
+
+	setCmd.AddCommand(setDehashedKeyCmd)
+	setCmd.AddCommand(setHunterKeyCmd)
+}
+
+var setCmd = &cobra.Command{
+	Use:   "set",
+	Short: "Set CrowsNest configuration values",
+	Long:  "Set CrowsNest configuration values such as API keys.",
 }
 
 // Command to set API key
 var setDehashedKeyCmd = &cobra.Command{
-	Use:   "set-dehashed [key]",
+	Use:   "dehashed [key]",
 	Short: "Set and store Dehashed.com API key",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -77,7 +85,7 @@ var setDehashedKeyCmd = &cobra.Command{
 }
 
 var setHunterKeyCmd = &cobra.Command{
-	Use:   "set-hunter [key]",
+	Use:   "hunter [key]",
 	Short: "Set and store Hunter.io API key",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

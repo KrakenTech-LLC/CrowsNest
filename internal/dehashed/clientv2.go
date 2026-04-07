@@ -198,7 +198,7 @@ func (dcv2 *DehashedClientV2) Search(searchRequest DehashedSearchRequest) (int, 
 	req.Header.Set("Dehashed-Api-Key", dcv2.apiKey)
 
 	if dcv2.debug {
-		headers := req.Header.Clone()
+		headers := redactedHeaders(req.Header)
 		h := fmt.Sprintf("Headers: %v\n", headers)
 		debug.PrintJson(h)
 		zap.L().Info("v2_search_debug",
@@ -286,7 +286,7 @@ func (dcv2 *DehashedClientV2) Search(searchRequest DehashedSearchRequest) (int, 
 	}
 
 	dcv2.results = append(dcv2.results, responseResults.Entries...)
-	return responseResults.TotalResults, responseResults.Balance, nil
+	return len(responseResults.Entries), responseResults.Balance, nil
 }
 
 func (dcv2 *DehashedClientV2) GetResults() sqlite.DehashedResults {
@@ -303,4 +303,12 @@ func enquoteSpaced(s string) string {
 		return fmt.Sprintf("\"%s\"", s)
 	}
 	return s
+}
+
+func redactedHeaders(headers http.Header) http.Header {
+	redacted := headers.Clone()
+	if redacted.Get("Dehashed-Api-Key") != "" {
+		redacted.Set("Dehashed-Api-Key", "[REDACTED]")
+	}
+	return redacted
 }

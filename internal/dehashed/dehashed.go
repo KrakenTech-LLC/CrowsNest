@@ -11,14 +11,20 @@ import (
 	"strings"
 )
 
+const (
+	maxSearchResultsPerPage  = 10000
+	maxSearchResultsPerQuery = 50000
+)
+
 // Dehasher is a struct for querying the Dehashed API
 type Dehasher struct {
-	options  sqlite.QueryOptions
-	nextPage int
-	debug    bool
-	balance  int
-	request  *DehashedSearchRequest
-	client   *DehashedClientV2
+	options    sqlite.QueryOptions
+	nextPage   int
+	debug      bool
+	balance    int
+	maxResults int
+	request    *DehashedSearchRequest
+	client     *DehashedClientV2
 }
 
 // NewDehasher creates a new Dehasher
@@ -51,55 +57,55 @@ func (dh *Dehasher) getNextPage() int {
 
 // setQueries sets the number of queries to make based on the number of records and requests
 func (dh *Dehasher) setQueries() {
-	var numQueries int
-
 	if dh.debug {
 		debug.PrintInfo("setting queries")
 	}
 
-	switch {
-	case dh.options.MaxRequests == 0:
+	if dh.options.MaxRequests == 0 {
 		zap.L().Error("max requests cannot be zero")
 		fmt.Println("[!] Max Requests cannot be zero")
 		os.Exit(1)
-	case dh.options.MaxRecords <= 10000 || dh.options.MaxRequests == 1:
-		numQueries = 1
-		if dh.options.MaxRecords > 10000 {
-			dh.options.MaxRecords = 10000
-		}
-		zap.L().Info("max requests set to 1", zap.Int("max_records", dh.options.MaxRecords))
-	case dh.options.MaxRequests < 0 && dh.options.MaxRecords > 20000:
-		numQueries = 3
-		dh.options.MaxRecords = 10000
-		zap.L().Info("max requests set to 3", zap.Int("max_records", dh.options.MaxRecords))
-	case dh.options.MaxRequests < 0 && dh.options.MaxRecords > 10000:
-		numQueries = 2
-		dh.options.MaxRecords = 10000
-		zap.L().Info("max requests set to 2", zap.Int("max_records", dh.options.MaxRecords))
-	case dh.options.MaxRecords < 0 && dh.options.MaxRecords < 10000:
-		numQueries = 1
-		zap.L().Info("max requests set to 1", zap.Int("max_records", dh.options.MaxRecords))
-	case dh.options.MaxRequests == 2 && dh.options.MaxRecords > 20000:
-		numQueries = 2
-		dh.options.MaxRecords = 10000
-		zap.L().Info("max requests set to 2", zap.Int("max_records", dh.options.MaxRecords))
-	case dh.options.MaxRequests == 2 && dh.options.MaxRecords <= 10000:
-		numQueries = 1
-		zap.L().Info("max requests set to 1", zap.Int("max_records", dh.options.MaxRecords))
-	default:
-		numQueries = 3
-		dh.options.MaxRecords = 10000
-		zap.L().Info("max requests set to 3", zap.Int("max_records", dh.options.MaxRecords))
 	}
 
+	requestedMaxResults := dh.options.MaxRecords
+	if requestedMaxResults <= 0 {
+		requestedMaxResults = maxSearchResultsPerQuery
+	}
+	if requestedMaxResults > maxSearchResultsPerQuery {
+		requestedMaxResults = maxSearchResultsPerQuery
+	}
+
+	pageSize := requestedMaxResults
+	if pageSize > maxSearchResultsPerPage {
+		pageSize = maxSearchResultsPerPage
+	}
+
+	numQueries := (requestedMaxResults + pageSize - 1) / pageSize
+	if dh.options.MaxRequests > 0 && dh.options.MaxRequests < numQueries {
+		numQueries = dh.options.MaxRequests
+	}
+
+	dh.maxResults = requestedMaxResults
+	if requestLimit := numQueries * pageSize; requestLimit < dh.maxResults {
+		dh.maxResults = requestLimit
+	}
+
+	dh.options.MaxRecords = pageSize
 	dh.options.MaxRequests = numQueries
+
+	zap.L().Info("dehashed_search_pagination",
+		zap.Int("max_results", dh.maxResults),
+		zap.Int("page_size", dh.options.MaxRecords),
+		zap.Int("max_requests", dh.options.MaxRequests),
+	)
 
 	if dh.debug {
 		debug.PrintInfo(fmt.Sprintf("setting max requests: %d", numQueries))
-		debug.PrintInfo(fmt.Sprintf("setting max records: %d", dh.options.MaxRecords))
+		debug.PrintInfo(fmt.Sprintf("setting page size: %d", dh.options.MaxRecords))
+		debug.PrintInfo(fmt.Sprintf("setting max results: %d", dh.maxResults))
 	}
 
-	fmt.Printf("Making %d Requests for %d Records (%d Total)\n", dh.options.MaxRequests, dh.options.MaxRecords, dh.options.MaxRequests*dh.options.MaxRecords)
+	fmt.Printf("Making %d Requests for up to %d Records (%d per request)\n", dh.options.MaxRequests, dh.maxResults, dh.options.MaxRecords)
 }
 
 // Start starts the querying process
@@ -151,7 +157,7 @@ func (dh *Dehasher) Start() {
 			fmt.Printf("      [-] Not enough entries, ending queries\n")
 			break
 		} else {
-			fmt.Printf("      [+] Retrieved %d records\n", dh.options.MaxRecords)
+			fmt.Printf("      [+] Retrieved %d records\n", count)
 		}
 
 		if dh.options.PrintBalance {
@@ -211,6 +217,9 @@ func (dh *Dehasher) buildRequest() {
 func (dh *Dehasher) parseResults() {
 	zap.L().Info("extracting_credentials")
 	results := dh.client.GetResults()
+	if dh.maxResults > 0 && len(results.Results) > dh.maxResults {
+		results.Results = results.Results[:dh.maxResults]
+	}
 	creds := results.ExtractUsers()
 	fmt.Printf("   [+] Discovered %d Credentials\n", len(creds))
 	err := sqlite.StoreUsers(creds)

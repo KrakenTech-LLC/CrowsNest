@@ -63,7 +63,7 @@ To configure the database location:
 CrowsNest requires an API key from Dehashed. Set it up with:
 ![Alt text](.img/set-dehashed.png "Set Dehashed Key")
 ```bash
-ar1ste1a@kali:~$ crowsnest set-dehashed <redacted>
+ar1ste1a@kali:~$ crowsnest set dehashed <redacted>
 ```
 
 ### Simple Query
@@ -134,10 +134,23 @@ crowsnest dehashed -R -E 'joh?n(ath[oa]n)' -D hotmail.com'
 CrowsNest is capable of handling output formats.  
 The default output format is JSON.  
 To change the output format, use the `-f` flag.  
-CrowsNest currently supports JSON, YAML, XML, and TEXT output formats.
+CrowsNest currently supports JSON, YAML, XML, TEXT, and GREP output formats.
 ``` go
 # Return matches for usernames exactly matching "admin" and write to text file 'admins_file.txt'
 crowsnest dehashed -U admin -o admins_file -f txt
+
+# Return one key=value record per line in a greppable file 'admins_file.grep'
+crowsnest dehashed -U admin -o admins_file -f grep
+```
+
+### Data Wells
+DeHashed data wells are free to query and do not require a paid API account.
+``` go
+# List the first page of data wells and write 'data_wells.json'
+crowsnest dehashed data-wells
+
+# Sort by record count and write one key=value record per line
+crowsnest dehashed data-wells --sort records-DESC --count 50 -f grep -o data_wells
 ```
 
 ---
@@ -216,11 +229,11 @@ crowsnest whois -n google.com
 ## 🌐 Hunter.io
 CrowsNest supports Hunter.io lookups.  
 Hunter.io lookups require a separate API Key from the Dehashed API.
-This can be set using the `set-hunter` command.
+This can be set using the `set hunter` command.
 ![Alt text](.img/set-hunter.png "Set Dehashed Key")
 ```bash
 # Set the Hunter.io API key
-crowsnest set-hunter <redacted>
+crowsnest set hunter <redacted>
 ```
 
 ### Domain Search

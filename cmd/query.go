@@ -25,7 +25,7 @@ func init() {
 	queryCmd.Flags().StringVarP(&dbQueryUserQuery, "user-query", "q", "", "User query to execute")
 	queryCmd.Flags().StringVarP(&dbQueryRawQuery, "raw-query", "r", "", "Raw SQL query to execute")
 	queryCmd.Flags().BoolVarP(&dbQueryListAll, "list-all", "a", false, "List all tables and their columns")
-	queryCmd.Flags().StringVarP(&dbQueryFormat, "format", "f", "json", "Output format (json, yaml, xml, txt)")
+	queryCmd.Flags().StringVarP(&dbQueryFormat, "format", "f", "json", "Output format (json, yaml, xml, txt, grep)")
 	queryCmd.Flags().StringVarP(&dbQueryFile, "file", "o", "query", "File to output results to")
 
 	// Add mutually exclusive flags to query and raw-query
