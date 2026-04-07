@@ -90,11 +90,11 @@ const (
 
 func GetTable(userInput string) Table {
 	switch strings.ToLower(userInput) {
-	case "results":
+	case "dehashed", "results":
 		return ResultsTable
 	case "runs":
 		return RunsTable
-	case "creds":
+	case "users", "creds":
 		return CredsTable
 	case "whois":
 		return WhoIsTable

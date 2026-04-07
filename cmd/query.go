@@ -18,15 +18,16 @@ func init() {
 	rootCmd.AddCommand(queryCmd)
 
 	// Add flags specific to whois command
-	queryCmd.Flags().StringVarP(&dbQueryTableName, "table", "t", "", "Table to query (results, creds, whois, subdomains, history, runs)")
+	queryCmd.Flags().StringVarP(&dbQueryTableName, "table", "t", "", "Table to query (dehashed, users, whois, subdomains, lookup, runs)")
 	queryCmd.Flags().IntVarP(&dbQueryLimitRows, "limit", "l", 100, "Limit number of results")
 	queryCmd.Flags().StringVarP(&dbQueryNotNull, "not-null", "n", "", "Filter for non-null values (comma-separated list, e.g., 'password,email')")
 	queryCmd.Flags().StringVarP(&dbQueryColumns, "columns", "c", "", "Columns to display in output (comma-separated list, e.g., 'username,email,password')")
 	queryCmd.Flags().StringVarP(&dbQueryUserQuery, "user-query", "q", "", "User query to execute")
 	queryCmd.Flags().StringVarP(&dbQueryRawQuery, "raw-query", "r", "", "Raw SQL query to execute")
 	queryCmd.Flags().BoolVarP(&dbQueryListAll, "list-all", "a", false, "List all tables and their columns")
+	queryCmd.Flags().BoolVarP(&dbQueryExport, "export", "x", false, "Export results to file using --file and --format")
 	queryCmd.Flags().StringVarP(&dbQueryFormat, "format", "f", "json", "Output format (json, yaml, xml, txt, grep)")
-	queryCmd.Flags().StringVarP(&dbQueryFile, "file", "o", "query", "File to output results to")
+	queryCmd.Flags().StringVarP(&dbQueryFile, "file", "o", "query", "File to output results to when --export is set")
 
 	// Add mutually exclusive flags to query and raw-query
 	// Cannot use query and raw-query at the same time
@@ -45,6 +46,7 @@ var (
 	dbQueryUserQuery string
 	dbQueryRawQuery  string
 	dbQueryListAll   bool
+	dbQueryExport    bool
 	dbQueryFormat    string
 	dbQueryFile      string
 
@@ -52,7 +54,7 @@ var (
 		Use:   "query",
 		Short: "Query the database",
 		Long: `Query the database for various information.
-If file is specified, results are written to file and not displayed in the terminal.`,
+Use --export with --file and --format to write results to a file instead of displaying them.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// If list-all flag is set, list all tables and columns
 			if dbQueryListAll {
@@ -70,14 +72,14 @@ If file is specified, results are written to file and not displayed in the termi
 			// Validate table name
 			if dbQueryTableName == "" {
 				fmt.Println("[!] Error: Table name is required. Use -t or --table to specify a table.")
-				fmt.Println("[*] Available tables: results, creds, whois, subdomains, history, runs")
+				fmt.Println("[*] Available tables: dehashed, users, whois, subdomains, lookup, runs")
 				fmt.Println("[*] Use --list-all to see all tables and their columns.")
 				return
 			}
 
 			if !isValidTable(dbQueryTableName) {
 				fmt.Printf("[!] Error: Unknown table '%s'.\n", dbQueryTableName)
-				fmt.Println("[*] Available tables: results, creds, whois, subdomains, history, runs")
+				fmt.Println("[*] Available tables: dehashed, users, whois, subdomains, lookup, runs")
 				fmt.Println("[*] Use --list-all to see all tables and their columns.")
 				return
 			}
@@ -124,7 +126,7 @@ If file is specified, results are written to file and not displayed in the termi
 			table := sqlite.GetTable(dbQueryTableName)
 			if table == sqlite.UnknownTable {
 				fmt.Printf("[!] Error: Unknown table type '%s'.\n", dbQueryTableName)
-				fmt.Println("[*] Available tables: results, creds, whois, subdomains, history, runs")
+				fmt.Println("[*] Available tables: dehashed, users, whois, subdomains, lookup, runs")
 				fmt.Println("[*] Use --list-all to see all tables and their columns.")
 				return
 			}
@@ -203,8 +205,7 @@ func tableQuery(table sqlite.Table) {
 		return
 	}
 
-	// Export results if file name is specified
-	if len(strings.TrimSpace(dbQueryFile)) > 0 {
+	if dbQueryExport {
 		fmt.Println("[*] Exporting results to file...")
 
 		if debugGlobal {
@@ -244,8 +245,6 @@ func tableQuery(table sqlite.Table) {
 
 		return
 	}
-	fmt.Println("[*] Querying Database...")
-
 	// Prepare data for pretty.Table
 	headers := cols
 	var tableRows [][]string
@@ -336,7 +335,7 @@ func rawDBQuery() {
 		return
 	}
 
-	if len(strings.TrimSpace(dbQueryFile)) > 0 {
+	if dbQueryExport {
 		fmt.Println("[*] Exporting results to file...")
 
 		if debugGlobal {
@@ -377,8 +376,6 @@ func rawDBQuery() {
 
 		return
 	}
-	fmt.Println("[*] Querying Database...")
-
 	// Prepare data for pretty.Table
 	headers := columns
 	var tableRows [][]string

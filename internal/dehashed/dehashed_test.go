@@ -70,3 +70,25 @@ func TestDataWellsURLDoesNotRequireAPIKey(t *testing.T) {
 		}
 	}
 }
+
+func TestDataWellGreppableUsesSpaceSeparatedNonEmptyTokens(t *testing.T) {
+	got := dataWellGreppable(DataWell{
+		Name:        "Example Breach",
+		Date:        "2025-03-01",
+		Records:     500000,
+		IsSensitive: true,
+		Data:        "name,email,address",
+	})
+
+	if strings.Contains(got, "\t") {
+		t.Fatalf("greppable output contains tab: %q", got)
+	}
+	if strings.Contains(got, "description=") {
+		t.Fatalf("greppable output contains empty field: %q", got)
+	}
+	for _, want := range []string{"name=Example_Breach", "date=2025-03-01", "records=500000", "is_sensitive=true", "data=name,email,address"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("greppable output = %q, want token %q", got, want)
+		}
+	}
+}

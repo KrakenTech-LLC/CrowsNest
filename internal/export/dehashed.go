@@ -34,8 +34,11 @@ func WriteCredsToFile(creds []sqlite.User, outputFile string, fileType files.Fil
 	case files.GREPPABLE:
 		var outStrings []string
 		for _, c := range creds {
-			outStrings = append(outStrings, fmt.Sprintf("email=%s\tusername=%s\tpassword=%s\n",
-				greppableValue(c.Email), greppableValue(c.Username), greppableValue(c.Password)))
+			var fields []string
+			fields = appendGreppableField(fields, "email", c.Email)
+			fields = appendGreppableField(fields, "username", c.Username)
+			fields = appendGreppableField(fields, "password", c.Password)
+			outStrings = append(outStrings, strings.Join(fields, " ")+"\n")
 		}
 		data = []byte(strings.Join(outStrings, ""))
 	default:
@@ -145,9 +148,9 @@ func WriteQueryResultsToFile(results []map[string]interface{}, outputFile string
 
 			rowStrings := make([]string, 0, len(keys))
 			for _, k := range keys {
-				rowStrings = append(rowStrings, fmt.Sprintf("%s=%s", k, greppableAnyValue(r[k])))
+				rowStrings = appendGreppableField(rowStrings, k, greppableAnyValue(r[k]))
 			}
-			outStrings = append(outStrings, strings.Join(rowStrings, "\t")+"\n")
+			outStrings = append(outStrings, strings.Join(rowStrings, " ")+"\n")
 		}
 		data = []byte(strings.Join(outStrings, ""))
 	default:
@@ -163,26 +166,25 @@ func WriteQueryResultsToFile(results []map[string]interface{}, outputFile string
 }
 
 func dehashedResultGreppable(r sqlite.Result) string {
-	fields := []string{
-		"id=" + greppableValue(r.DehashedId),
-		"email=" + greppableValue(strings.Join(r.Email, ",")),
-		"ip_address=" + greppableValue(strings.Join(r.IpAddress, ",")),
-		"username=" + greppableValue(strings.Join(r.Username, ",")),
-		"password=" + greppableValue(strings.Join(r.Password, ",")),
-		"hashed_password=" + greppableValue(strings.Join(r.HashedPassword, ",")),
-		"hash_type=" + greppableValue(r.HashType),
-		"name=" + greppableValue(strings.Join(r.Name, ",")),
-		"vin=" + greppableValue(strings.Join(r.Vin, ",")),
-		"license_plate=" + greppableValue(strings.Join(r.LicensePlate, ",")),
-		"url=" + greppableValue(strings.Join(r.Url, ",")),
-		"social=" + greppableValue(strings.Join(r.Social, ",")),
-		"cryptocurrency_address=" + greppableValue(strings.Join(r.CryptoCurrencyAddress, ",")),
-		"address=" + greppableValue(strings.Join(r.Address, ",")),
-		"phone=" + greppableValue(strings.Join(r.Phone, ",")),
-		"company=" + greppableValue(strings.Join(r.Company, ",")),
-		"database_name=" + greppableValue(r.DatabaseName),
-	}
-	return strings.Join(fields, "\t")
+	var fields []string
+	fields = appendGreppableField(fields, "id", r.DehashedId)
+	fields = appendGreppableField(fields, "email", strings.Join(r.Email, ","))
+	fields = appendGreppableField(fields, "ip_address", strings.Join(r.IpAddress, ","))
+	fields = appendGreppableField(fields, "username", strings.Join(r.Username, ","))
+	fields = appendGreppableField(fields, "password", strings.Join(r.Password, ","))
+	fields = appendGreppableField(fields, "hashed_password", strings.Join(r.HashedPassword, ","))
+	fields = appendGreppableField(fields, "hash_type", r.HashType)
+	fields = appendGreppableField(fields, "name", strings.Join(r.Name, ","))
+	fields = appendGreppableField(fields, "vin", strings.Join(r.Vin, ","))
+	fields = appendGreppableField(fields, "license_plate", strings.Join(r.LicensePlate, ","))
+	fields = appendGreppableField(fields, "url", strings.Join(r.Url, ","))
+	fields = appendGreppableField(fields, "social", strings.Join(r.Social, ","))
+	fields = appendGreppableField(fields, "cryptocurrency_address", strings.Join(r.CryptoCurrencyAddress, ","))
+	fields = appendGreppableField(fields, "address", strings.Join(r.Address, ","))
+	fields = appendGreppableField(fields, "phone", strings.Join(r.Phone, ","))
+	fields = appendGreppableField(fields, "company", strings.Join(r.Company, ","))
+	fields = appendGreppableField(fields, "database_name", r.DatabaseName)
+	return strings.Join(fields, " ")
 }
 
 func greppableAnyValue(value interface{}) string {
@@ -205,10 +207,15 @@ func greppableAnyValue(value interface{}) string {
 }
 
 func greppableValue(value string) string {
-	value = strings.ReplaceAll(value, "\r", " ")
-	value = strings.ReplaceAll(value, "\n", " ")
-	value = strings.ReplaceAll(value, "\t", " ")
-	return strings.TrimSpace(value)
+	return strings.Join(strings.Fields(value), "_")
+}
+
+func appendGreppableField(fields []string, key, value string) []string {
+	value = greppableValue(value)
+	if value == "" {
+		return fields
+	}
+	return append(fields, fmt.Sprintf("%s=%s", key, value))
 }
 
 func WriteWhoIsHistoryToFile(results []sqlite.HistoryRecord, outputFile string, fileType files.FileType) error {

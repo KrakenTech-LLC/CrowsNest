@@ -163,20 +163,24 @@ func (dwr DataWellsResponse) String() string {
 }
 
 func dataWellGreppable(well DataWell) string {
-	fields := []string{
-		"name=" + cleanGreppableValue(well.Name),
-		"date=" + cleanGreppableValue(well.Date),
-		"records=" + strconv.Itoa(well.Records),
-		"is_sensitive=" + strconv.FormatBool(well.IsSensitive),
-		"data=" + cleanGreppableValue(well.Data),
-		"description=" + cleanGreppableValue(well.Description),
-	}
-	return strings.Join(fields, "\t")
+	var fields []string
+	fields = appendDataWellGreppableField(fields, "name", well.Name)
+	fields = appendDataWellGreppableField(fields, "date", well.Date)
+	fields = appendDataWellGreppableField(fields, "records", strconv.Itoa(well.Records))
+	fields = appendDataWellGreppableField(fields, "is_sensitive", strconv.FormatBool(well.IsSensitive))
+	fields = appendDataWellGreppableField(fields, "data", well.Data)
+	fields = appendDataWellGreppableField(fields, "description", well.Description)
+	return strings.Join(fields, " ")
 }
 
 func cleanGreppableValue(value string) string {
-	value = strings.ReplaceAll(value, "\r", " ")
-	value = strings.ReplaceAll(value, "\n", " ")
-	value = strings.ReplaceAll(value, "\t", " ")
-	return strings.TrimSpace(value)
+	return strings.Join(strings.Fields(value), "_")
+}
+
+func appendDataWellGreppableField(fields []string, key, value string) []string {
+	value = cleanGreppableValue(value)
+	if value == "" {
+		return fields
+	}
+	return append(fields, fmt.Sprintf("%s=%s", key, value))
 }
